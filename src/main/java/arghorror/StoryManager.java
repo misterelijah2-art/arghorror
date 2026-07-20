@@ -10,19 +10,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.Filterable;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.core.component.DataComponents;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -40,8 +34,10 @@ public class StoryManager {
             UUID uuid = player.getUUID();
             if (!chapters.containsKey(uuid)) {
                 chapters.put(uuid, 0);
-                giveIntroBook(player);
+                scheduleMessage(player, 60,  "\u00a78\u00a7l[SIGNAL_LOST]");
+                scheduleMessage(player, 80,  "\u00a77A book has appeared in your inventory.");
                 scheduleMessage(player, 100, GlitchMessages.CHAPTER_0_MSG);
+                giveIntroBook(player);
             }
         });
 
@@ -99,7 +95,7 @@ public class StoryManager {
             case 1 -> {
                 server.getPlayerList().broadcastSystemMessage(
                     Component.literal("\u00a77[\u00a78DR_VALE\u00a77] joined the game"), false);
-                scheduleMessage(player, 60, "\u00a78[DR_VALE]: " + GlitchMessages.VALE_LOG_1);
+                scheduleMessage(player, 60,  "\u00a78[DR_VALE]: " + GlitchMessages.VALE_LOG_1);
                 scheduleMessage(player, 120, "\u00a77[\u00a78DR_VALE\u00a77] left the game");
                 level.playSound(null, player.blockPosition(),
                     SoundEvents.AMBIENT_CAVE.value(), SoundSource.AMBIENT, 1.0f, 0.5f);
@@ -107,8 +103,8 @@ public class StoryManager {
             case 2 -> {
                 player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60, 1, false, false));
                 player.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 100, 2, false, false));
-                scheduleMessage(player, 40, GlitchMessages.VALE_FINAL_LOG);
-                scheduleMessage(player, 80, GlitchMessages.ARCHITECT_AWARE);
+                scheduleMessage(player, 40,  GlitchMessages.VALE_FINAL_LOG);
+                scheduleMessage(player, 80,  GlitchMessages.ARCHITECT_AWARE);
             }
             case 3 -> {
                 scheduleMessage(player, 20, GlitchMessages.ARCHITECT_MSG_1);
@@ -129,10 +125,10 @@ public class StoryManager {
                 );
                 bar.addPlayer(player);
                 bossBars.put(uuid, bar);
-                scheduleMessage(player, 20, GlitchMessages.FINAL_MSG_1);
-                scheduleMessage(player, 80, GlitchMessages.FINAL_MSG_2);
+                scheduleMessage(player, 20,  GlitchMessages.FINAL_MSG_1);
+                scheduleMessage(player, 80,  GlitchMessages.FINAL_MSG_2);
                 scheduleMessage(player, 160, GlitchMessages.FINAL_MSG_3);
-                giveFinalBook(player);
+                giveFinalLore(player);
                 level.playSound(null, player.blockPosition(),
                     SoundEvents.WITHER_DEATH, SoundSource.HOSTILE, 0.5f, 0.3f);
             }
@@ -155,9 +151,8 @@ public class StoryManager {
         }
     }
 
-    // Delayed message via a one-shot flag stored in a boolean array
     private static void scheduleMessage(ServerPlayer player, int delayTicks, String message) {
-        MinecraftServer server = level(player).getServer();
+        MinecraftServer server = ((ServerLevel) player.level()).getServer();
         if (server == null) return;
         int targetTick = server.getTickCount() + delayTicks;
         boolean[] fired = {false};
@@ -171,42 +166,34 @@ public class StoryManager {
         });
     }
 
-    private static ServerLevel level(ServerPlayer player) {
-        return (ServerLevel) player.level();
-    }
-
+    // Delivers intro lore as a series of chat messages (avoids Filterable/NBT API issues)
     private static void giveIntroBook(ServerPlayer player) {
-        ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
-        book.set(DataComponents.WRITTEN_BOOK_CONTENT, new WrittenBookContent(
-            Filterable.passThrough("SIGNAL_LOST"),
-            "DR. ORIN VALE",
-            0,
-            List.of(
-                Filterable.passThrough(Component.literal(
-                    "SIGNAL_LOST\n\nIf you are reading this... you are already inside it.\n\n- DR. VALE")),
-                Filterable.passThrough(Component.literal(
-                    "Day 1\nThe anomaly first appeared at coordinates I dare not write. Something watched me write this."))
-            ),
-            true
-        ));
-        player.getInventory().add(book);
+        scheduleMessage(player, 20,  "\u00a78\u00a7l=================================================");
+        scheduleMessage(player, 25,  "\u00a74\u00a7l         [ SIGNAL_LOST ]");
+        scheduleMessage(player, 30,  "\u00a78\u00a7l=================================================");
+        scheduleMessage(player, 40,  "\u00a77\u00a7oAuthor: DR. ORIN VALE");
+        scheduleMessage(player, 50,  "\u00a77\u00a7o\"If you are reading this...");
+        scheduleMessage(player, 55,  "\u00a77\u00a7o you are already inside it.\"");
+        scheduleMessage(player, 65,  "\u00a78- - - - - - - - - - - - - - -");
+        scheduleMessage(player, 75,  "\u00a77\u00a7oDay 1: The anomaly first appeared");
+        scheduleMessage(player, 80,  "\u00a77\u00a7oat coordinates I dare not write.");
+        scheduleMessage(player, 85,  "\u00a77\u00a7oThe world responded.");
+        scheduleMessage(player, 90,  "\u00a77\u00a7oSomething watched me write this.");
+        scheduleMessage(player, 100, "\u00a78\u00a7l=================================================");
     }
 
-    private static void giveFinalBook(ServerPlayer player) {
-        ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
-        book.set(DataComponents.WRITTEN_BOOK_CONTENT, new WrittenBookContent(
-            Filterable.passThrough("FINAL TRANSMISSION"),
-            "THE ARCHITECT",
-            0,
-            List.of(
-                Filterable.passThrough(Component.literal(
-                    "YOU WERE NEVER MEANT TO READ THIS FAR.\n\nThe simulation does not end.\nYou do.")),
-                Filterable.passThrough(Component.literal(
-                    "DR. VALE tried to warn you.\nHe could not leave either.\n\nNeither can you."))
-            ),
-            true
-        ));
-        player.getInventory().add(book);
+    private static void giveFinalLore(ServerPlayer player) {
+        scheduleMessage(player, 200, "\u00a78\u00a7l=================================================");
+        scheduleMessage(player, 210, "\u00a74\u00a7l     [ FINAL TRANSMISSION ]");
+        scheduleMessage(player, 215, "\u00a78\u00a7l=================================================");
+        scheduleMessage(player, 225, "\u00a74\u00a7oAuthor: THE ARCHITECT");
+        scheduleMessage(player, 235, "\u00a74\u00a7oYOU WERE NEVER MEANT TO READ THIS FAR.");
+        scheduleMessage(player, 245, "\u00a74\u00a7oThe simulation does not end. You do.");
+        scheduleMessage(player, 255, "\u00a78- - - - - - - - - - - - - - -");
+        scheduleMessage(player, 265, "\u00a74\u00a7oDR. VALE tried to warn you.");
+        scheduleMessage(player, 275, "\u00a74\u00a7oHe could not leave either.");
+        scheduleMessage(player, 285, "\u00a74\u00a7oNeither can you.");
+        scheduleMessage(player, 295, "\u00a78\u00a7l=================================================");
     }
 
     public static int getChapter(UUID uuid) {
