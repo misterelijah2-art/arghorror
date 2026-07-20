@@ -51,21 +51,34 @@ public class SanitySystem {
     }
 
     private static void applySanityEffects(ServerPlayer player, int s, ServerLevel level) {
-        if (s <= 60) {
-            player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 0, false, false));
+        // Only apply darkness if sanity is low AND the effect isn't already running
+        if (s <= 60 && !player.hasEffect(MobEffects.DARKNESS)) {
+            player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 100, 0, false, false));
         }
+        // Remove darkness instantly when sanity recovers above 60
+        if (s > 60 && player.hasEffect(MobEffects.DARKNESS)) {
+            player.removeEffect(MobEffects.DARKNESS);
+        }
+
         if (s <= 40 && RANDOM.nextInt(20) == 0) {
             level.playSound(null, player.blockPosition(),
                 SoundEvents.AMBIENT_CAVE.value(), SoundSource.AMBIENT,
                 0.4f, 0.5f + RANDOM.nextFloat() * 0.3f);
         }
-        if (s <= 20) {
+
+        // Only apply nausea if not already active
+        if (s <= 20 && !player.hasEffect(MobEffects.NAUSEA)) {
             player.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 80, 1, false, false));
-            if (RANDOM.nextInt(30) == 0) {
-                player.sendSystemMessage(
-                    net.minecraft.network.chat.Component.literal(GlitchMessages.randomGlitch()));
-            }
         }
+        if (s > 20 && player.hasEffect(MobEffects.NAUSEA)) {
+            player.removeEffect(MobEffects.NAUSEA);
+        }
+
+        if (s <= 20 && RANDOM.nextInt(30) == 0) {
+            player.sendSystemMessage(
+                net.minecraft.network.chat.Component.literal(GlitchMessages.randomGlitch()));
+        }
+
         if (s == 0 && RANDOM.nextInt(100) == 0) {
             player.sendSystemMessage(
                 net.minecraft.network.chat.Component.literal(
