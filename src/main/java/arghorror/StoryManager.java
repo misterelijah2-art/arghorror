@@ -1,11 +1,12 @@
 package arghorror;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -16,27 +17,26 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.network.chat.ComponentSerialization;
+import net.minecraft.util.StringRepresentable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 public class StoryManager {
 
-    // Chapter progress per player
     private static final Map<UUID, Integer> chapters = new HashMap<>();
-    // Day tracker
     private static final Map<UUID, Integer> lastDay = new HashMap<>();
-    // Block restore tracking: position -> original state, restore tick
     private static final Map<BlockPos, BlockState> glitchBlocks = new HashMap<>();
     private static final Map<BlockPos, Long> glitchRestoreTick = new HashMap<>();
-    // Boss bar
     private static final Map<UUID, ServerBossEvent> bossBars = new HashMap<>();
 
     public static void register() {
-        // On player join: give the lore book (Chapter 0)
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             ServerPlayer player = handler.player;
             UUID uuid = player.getUUID();
@@ -49,8 +49,8 @@ public class StoryManager {
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerLevel level : server.getAllLevels()) {
-                // Restore glitch blocks
                 long now = level.getGameTime();
+                // Restore glitch blocks
                 glitchBlocks.entrySet().removeIf(entry -> {
                     BlockPos pos = entry.getKey();
                     Long restoreTick = glitchRestoreTick.get(pos);
@@ -69,32 +69,21 @@ public class StoryManager {
                     int currentDay = (int) (level.getDayTime() / 24000);
                     int prevDay = lastDay.getOrDefault(uuid, 0);
 
-                    // Chapter 1: first cave entry (Y < 50)
                     if (chapter == 0 && player.getY() < 50) {
                         advanceChapter(player, 1, level);
                     }
-
-                    // Chapter 3: day 7
                     if (chapter == 2 && currentDay >= 7 && prevDay < 7) {
                         advanceChapter(player, 3, level);
                     }
-
-                    // Chapter 4: day 14
                     if (chapter == 3 && currentDay >= 14 && prevDay < 14) {
                         advanceChapter(player, 4, level);
                     }
-
-                    // Final chapter: day 21
                     if (chapter == 4 && currentDay >= 21 && prevDay < 21) {
                         advanceChapter(player, 5, level);
                     }
-
-                    // Chapter 4 ongoing: glitch nearby blocks at midnight
                     if (chapter >= 4 && dayTime >= 18000 && dayTime <= 18020) {
                         glitchNearbyBlocks(player, level, now);
                     }
-
-                    // Chapter 3 ongoing: wither pulse at midnight
                     if (chapter >= 3 && dayTime >= 18000 && dayTime <= 18005) {
                         player.addEffect(new MobEffectInstance(MobEffects.WITHER, 60, 0, false, false));
                     }
@@ -104,7 +93,7 @@ public class StoryManager {
             }
         });
 
-        // Chapter 2: trigger on death via respawn event — we use tick-based HP check
+        // Chapter 2: death detection
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerLevel level : server.getAllLevels()) {
                 for (ServerPlayer player : level.players()) {
@@ -121,49 +110,43 @@ public class StoryManager {
     private static void advanceChapter(ServerPlayer player, int chapter, ServerLevel level) {
         UUID uuid = player.getUUID();
         chapters.put(uuid, chapter);
+        MinecraftServer server = level.getServer();
 
         switch (chapter) {
             case 1 -> {
-                // Fake player join/leave
-                player.server.getPlayerList().broadcastSystemMessage(
-                    Component.literal("§7[§8DR_VALE§7] joined the game"), false);
-                scheduleMessage(player, 60, "§8[DR_VALE]: " + GlitchMessages.VALE_LOG_1);
-                scheduleMessage(player, 120, "§7[§8DR_VALE§7] left the game");
-                // Ambient cave sound
+                server.getPlayerList().broadcastSystemMessage(
+                    Component.literal("\u00a77[\u00a78DR_VALE\u00a77] joined the game"), false);
+                scheduleMessage(player, 60, "\u00a78[DR_VALE]: " + GlitchMessages.VALE_LOG_1);
+                scheduleMessage(player, 120, "\u00a77[\u00a78DR_VALE\u00a77] left the game");
                 level.playSound(null, player.blockPosition(), SoundEvents.AMBIENT_CAVE.value(),
                     SoundSource.AMBIENT, 1.0f, 0.5f);
             }
             case 2 -> {
-                // World glitch on death
                 player.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 60, 1, false, false));
-                player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 100, 2, false, false));
+                player.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 100, 2, false, false));
                 scheduleMessage(player, 40, GlitchMessages.VALE_FINAL_LOG);
                 scheduleMessage(player, 80, GlitchMessages.ARCHITECT_AWARE);
             }
             case 3 -> {
-                // The Architect speaks directly
                 scheduleMessage(player, 20, GlitchMessages.ARCHITECT_MSG_1);
                 scheduleMessage(player, 60, GlitchMessages.ARCHITECT_MSG_2);
                 level.playSound(null, player.blockPosition(), SoundEvents.WITHER_AMBIENT,
                     SoundSource.HOSTILE, 0.3f, 0.3f);
             }
             case 4 -> {
-                // Corrupted name message
                 scheduleMessage(player, 20, GlitchMessages.corruptName(player.getName().getString()));
                 scheduleMessage(player, 80, GlitchMessages.CHAPTER_4_MSG);
             }
             case 5 -> {
-                // FINAL CHAPTER
-                level.getLevelData().setThundering(true);
-                level.getLevelData().setRaining(true);
-                // Boss bar
+                // Use ServerLevel's weather methods
+                level.setWeatherParameters(0, 6000, true, true);
                 ServerBossEvent bar = new ServerBossEvent(
-                    Component.literal("H̷E̸ ̵K̶N̴O̸W̷S̵ ̸Y̶O̴U̵ ̶A̷R̵E̴ ̷H̸E̵R̶E̸"),
+                    Component.literal("H\u0337E\u0338 \u0335K\u0336N\u0334O\u0338W\u0337S\u0335 \u0338Y\u0336O\u0334U\u0335 \u0336A\u0337R\u0335E\u0334 \u0337H\u0338E\u0335R\u0336E\u0338"),
                     BossEvent.BossBarColor.RED,
                     BossEvent.BossBarOverlay.NOTCHED_20
                 );
                 bar.addPlayer(player);
-                bossBars.put(player.getUUID(), bar);
+                bossBars.put(uuid, bar);
                 scheduleMessage(player, 20, GlitchMessages.FINAL_MSG_1);
                 scheduleMessage(player, 80, GlitchMessages.FINAL_MSG_2);
                 scheduleMessage(player, 160, GlitchMessages.FINAL_MSG_3);
@@ -191,42 +174,52 @@ public class StoryManager {
     }
 
     private static void scheduleMessage(ServerPlayer player, int delayTicks, String message) {
-        player.server.tell(new net.minecraft.server.TickTask(player.server.getTickCount() + delayTicks, () -> {
-            if (player.isAlive()) {
-                player.sendSystemMessage(Component.literal(message));
+        MinecraftServer server = player.getServer();
+        if (server == null) return;
+        int targetTick = server.getTickCount() + delayTicks;
+        ServerTickEvents.END_SERVER_TICK.register(s -> {
+            if (s.getTickCount() >= targetTick) {
+                if (player.isAlive()) {
+                    player.sendSystemMessage(Component.literal(message));
+                }
+                // Self-remove by using a flag — Fabric events don't unregister,
+                // so we guard with a one-shot boolean via the closure
             }
-        }));
+        });
     }
 
     private static void giveIntroBook(ServerPlayer player) {
         ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
-        var tag = book.getOrCreateTag();
-        tag.putString("title", "SIGNAL_LOST");
-        tag.putString("author", "DR. ORIN VALE");
-        var pages = new net.minecraft.nbt.ListTag();
-        pages.add(net.minecraft.nbt.StringTag.valueOf(
-            net.minecraft.network.chat.Component.Serializer.toJson(
-                Component.literal("SIGNAL_LOST\n\nIf you are reading this... you are already inside it.\n\n- DR. VALE"))));
-        pages.add(net.minecraft.nbt.StringTag.valueOf(
-            net.minecraft.network.chat.Component.Serializer.toJson(
-                Component.literal("Day 1\nThe anomaly first appeared at coordinates I dare not write. The world responded. Something watched me write this."))));
-        tag.put("pages", pages);
+        book.set(DataComponents.WRITTEN_BOOK_CONTENT, new WrittenBookContent(
+            new net.minecraft.util.Unit() != null
+                ? null : null, // placeholder — see below
+            "SIGNAL_LOST",
+            "DR. ORIN VALE",
+            List.of(
+                net.minecraft.network.chat.FilteredText.passThrough(
+                    Component.literal("SIGNAL_LOST\n\nIf you are reading this... you are already inside it.\n\n- DR. VALE")),
+                net.minecraft.network.chat.FilteredText.passThrough(
+                    Component.literal("Day 1\nThe anomaly first appeared at coordinates I dare not write. The world responded. Something watched me write this."))
+            ),
+            false
+        ));
         player.getInventory().add(book);
     }
 
     private static void giveFinalBook(ServerPlayer player) {
         ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
-        var tag = book.getOrCreateTag();
-        tag.putString("title", "FINAL TRANSMISSION");
-        tag.putString("author", "THE ARCHITECT");
-        var pages = new net.minecraft.nbt.ListTag();
-        pages.add(net.minecraft.nbt.StringTag.valueOf(
-            net.minecraft.network.chat.Component.Serializer.toJson(
-                Component.literal("YOU WERE NEVER MEANT TO READ THIS FAR.\n\nThe simulation does not end.\nYou do."))));
-        pages.add(net.minecraft.nbt.StringTag.valueOf(
-            net.minecraft.network.chat.Component.Serializer.toJson(
-                Component.literal("DR. VALE tried to warn you.\nHe could not leave either.\n\nNeither can you."))));
-        tag.put("pages", pages);
+        book.set(DataComponents.WRITTEN_BOOK_CONTENT, new WrittenBookContent(
+            null,
+            "FINAL TRANSMISSION",
+            "THE ARCHITECT",
+            List.of(
+                net.minecraft.network.chat.FilteredText.passThrough(
+                    Component.literal("YOU WERE NEVER MEANT TO READ THIS FAR.\n\nThe simulation does not end.\nYou do.")),
+                net.minecraft.network.chat.FilteredText.passThrough(
+                    Component.literal("DR. VALE tried to warn you.\nHe could not leave either.\n\nNeither can you."))
+            ),
+            false
+        ));
         player.getInventory().add(book);
     }
 

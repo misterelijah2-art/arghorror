@@ -16,7 +16,6 @@ public class GlitchEvents {
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             tick++;
-            // Every ~30 seconds, maybe fire a glitch event
             if (tick % 600 != 0) return;
 
             for (ServerLevel level : server.getAllLevels()) {
@@ -26,35 +25,27 @@ public class GlitchEvents {
 
                     int roll = RANDOM.nextInt(100);
 
-                    // Distant footstep sound
                     if (roll < 30) {
+                        // Distant sculk-like click
                         level.playSound(null, player.blockPosition(),
-                            SoundEvents.SCULK_SENSOR_CLICKING, SoundSource.AMBIENT,
+                            SoundEvents.SCULK_SENSOR_CLICKING_STOP, SoundSource.AMBIENT,
                             0.3f, 0.5f);
-                    }
-                    // Fake entity sound nearby
-                    else if (roll < 55) {
+                    } else if (roll < 55) {
                         level.playSound(null, player.blockPosition(),
                             SoundEvents.ENDERMAN_AMBIENT, SoundSource.HOSTILE,
                             0.15f, 0.6f);
-                    }
-                    // Whisper-like cave sound
-                    else if (roll < 75) {
+                    } else if (roll < 75) {
                         level.playSound(null, player.blockPosition(),
                             SoundEvents.AMBIENT_CAVE.value(), SoundSource.AMBIENT,
                             0.2f, 0.3f);
-                    }
-                    // Cryptic chat message
-                    else if (roll < 90 && chapter >= 2) {
+                    } else if (roll < 90 && chapter >= 2) {
                         player.sendSystemMessage(
                             net.minecraft.network.chat.Component.literal(
                                 GlitchMessages.randomGlitch()));
-                    }
-                    // Fake system ping (only high chapters)
-                    else if (chapter >= 3) {
+                    } else if (chapter >= 3) {
                         player.sendSystemMessage(
                             net.minecraft.network.chat.Component.literal(
-                                "§8[SYSTEM]: " + GlitchMessages.randomSystemGlitch()));
+                                "\u00a78[SYSTEM]: " + GlitchMessages.randomSystemGlitch()));
                     }
                 }
             }
