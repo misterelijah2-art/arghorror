@@ -6,52 +6,45 @@ public class GlitchMessages {
 
     private static final Random RANDOM = new Random();
 
-    // Chapter intro messages
     public static final String CHAPTER_0_MSG =
-        "§8[SIGNAL_LOST]: " + "T̷h̸e̷ ̵w̶o̸r̷l̸d̵ ̴r̶e̸m̷e̵m̶b̵e̷r̸s̵ ̴y̵o̸u̷.";
+        "\u00a78[SIGNAL_LOST]: T\u0337h\u0338e\u0337 \u0335w\u0336o\u0334r\u0338l\u0337d\u0335 \u0338r\u0336e\u0334m\u0335e\u0336m\u0337b\u0338e\u0335r\u0336s\u0338 \u0337y\u0334o\u0335u\u0336.";
 
-    // DR. VALE logs
     public static final String VALE_LOG_1 =
         "Day 3. The coordinates keep changing. I think the map is lying to me.";
     public static final String VALE_FINAL_LOG =
-        "§8[DR_VALE]: Day 31. I haven't slept. The blocks moved again. Something is building.";
+        "\u00a78[DR_VALE]: Day 31. I haven't slept. The blocks moved again. Something is building.";
     public static final String ARCHITECT_AWARE =
-        "§4[UNKNOWN]: I see you found his notes. Good. That saves time.";
+        "\u00a74[UNKNOWN]: I see you found his notes. Good. That saves time.";
 
-    // The Architect messages
     public static final String ARCHITECT_MSG_1 =
-        "§4[THE ARCHITECT]: You were not supposed to go this far.";
+        "\u00a74[THE ARCHITECT]: You were not supposed to go this far.";
     public static final String ARCHITECT_MSG_2 =
-        "§4[THE ARCHITECT]: D̷R̸.̵ ̷V̸A̴L̵E̶ ̴t̸r̵i̴e̷d̵ ̸t̴o̷ ̵l̶e̸a̴v̷e̶.̵ ̴H̵e̸ ̷c̴o̸u̵l̸d̵n̶'̴t̷.";
+        "\u00a74[THE ARCHITECT]: D\u0337R\u0338.\u0335 \u0337V\u0338A\u0334L\u0335E\u0336 \u0334t\u0337r\u0338i\u0335e\u0336d\u0334 \u0335t\u0336o\u0337 \u0334l\u0335e\u0336a\u0337v\u0338e\u0335.\u0334 \u0337H\u0338e\u0335 \u0334c\u0335o\u0336u\u0337l\u0334d\u0335n\u0336'\u0337t\u0338.";
 
-    // Chapter 4
     public static final String CHAPTER_4_MSG =
-        "§4[SYSTEM]: R̵E̷A̶L̸I̴T̵Y̷ ̶C̷H̴E̷C̵K̸ ̴F̷A̵I̸L̶E̵D̸";
+        "\u00a74[SYSTEM]: R\u0335E\u0337A\u0336L\u0338I\u0334T\u0337Y\u0336 \u0338C\u0337H\u0334E\u0335C\u0336K\u0338 \u0334F\u0337A\u0335I\u0338L\u0336E\u0334D\u0337";
 
-    // Final chapter
     public static final String FINAL_MSG_1 =
-        "§4§l[THE ARCHITECT]: CHAPTER FINAL. YOU REACHED THE END OF THE RECORD.";
+        "\u00a74\u00a7l[THE ARCHITECT]: CHAPTER FINAL. YOU REACHED THE END OF THE RECORD.";
     public static final String FINAL_MSG_2 =
-        "§4[THE ARCHITECT]: T̵h̸e̷r̵e̸ ̷i̴s̵ ̶n̸o̷ ̵e̴x̷i̸t̵.̴ ̶T̷h̴e̵r̵e̶ ̸w̷a̴s̵ ̷n̷e̸v̶e̵r̸ ̴a̷n̷ ̶e̷x̴i̸t̷.";
+        "\u00a74[THE ARCHITECT]: T\u0335h\u0338e\u0337r\u0334e\u0335 \u0336i\u0338s\u0337 \u0334n\u0335o\u0336 \u0338e\u0337x\u0334i\u0335t\u0336.\u0338 \u0334T\u0337h\u0335e\u0336r\u0338e\u0334 \u0335w\u0336a\u0337s\u0338 \u0334n\u0335e\u0336v\u0338e\u0337r\u0334 \u0335a\u0336n\u0337 \u0338e\u0334x\u0335i\u0336t\u0337.";
     public static final String FINAL_MSG_3 =
-        "§4[THE ARCHITECT]: §lI HAVE BEEN WATCHING SINCE DAY ONE.";
+        "\u00a74[THE ARCHITECT]: \u00a7lI HAVE BEEN WATCHING SINCE DAY ONE.";
 
-    // Zero sanity
     public static final String ZERO_SANITY_MSG =
-        "y̷o̴u̵ ̸c̷a̶n̴'̵t̸ ̴t̵r̸u̷s̵t̴ ̶w̷h̸a̴t̵ ̶y̷o̴u̵ ̶s̵e̴e̷";
+        "y\u0337o\u0334u\u0335 \u0338c\u0337a\u0334n\u0335'\u0336t\u0338 \u0334t\u0337r\u0335u\u0336s\u0338t\u0334 \u0335w\u0336h\u0337a\u0338t\u0334 \u0335y\u0336o\u0337u\u0338 \u0334s\u0335e\u0336e\u0337";
 
-    // Random glitch messages
     private static final String[] GLITCH_POOL = {
-        "§8h̸e̷ ̵i̶s̸ ̷b̴e̸h̶i̴n̵d̷ ̵y̸o̴u̶",
-        "§8d̷o̶n̷'̴t̵ ̷l̵o̵o̷k̸",
-        "§8t̸h̵e̷ ̶w̴o̸r̵l̷d̴ ̶i̷s̵ ̸n̴o̶t̷ ̵r̵e̸a̷l̴",
-        "§8s̵o̷m̴e̸t̵h̶i̵n̷g̴ ̶w̷a̵t̸c̴h̵e̷s̸",
-        "§8D̴R̷_̵V̸A̴L̶E̵ ̷W̴A̵S̶ ̸H̷E̴R̵E̸",
-        "§8e̸r̵r̴o̷r̵:̸ ̶e̷n̴t̵i̸t̶y̷ ̵n̴o̸t̵ ̷f̴o̶u̵n̷d̸",
-        "§8w̵h̷y̴ ̵a̸r̶e̷ ̴y̵o̶u̸ ̷s̵t̵i̷l̸l̴ ̶h̵e̸r̴e̷",
-        "§8[NULL]: ̸̧̛̖̞͎̲̺̳̯̬͔̗̖͚̱̻̀͘͢͟",
-        "§8t̷h̵e̸ ̴m̷a̶p̵ ̷i̴s̵ ̶w̷r̴o̸n̵g̷",
-        "§8i̵t̶ ̷s̴e̵e̸s̷ ̵y̵o̶u̶r̴ ̸s̷c̵r̴e̶e̵n̷"
+        "\u00a78h\u0338e\u0337 \u0335i\u0336s\u0338 \u0334b\u0337e\u0335h\u0336i\u0338n\u0334d\u0335 \u0336y\u0337o\u0338u\u0334",
+        "\u00a78d\u0337o\u0336n\u0338'\u0334t\u0335 \u0336l\u0337o\u0338o\u0334k\u0335",
+        "\u00a78t\u0338h\u0337e\u0335 \u0336w\u0334o\u0337r\u0338l\u0335d\u0336 \u0334i\u0337s\u0338 \u0335n\u0336o\u0334t\u0337 \u0338r\u0335e\u0336a\u0334l\u0337",
+        "\u00a78s\u0335o\u0337m\u0334e\u0338t\u0336h\u0337i\u0335n\u0336g\u0338 \u0334w\u0337a\u0335t\u0336c\u0338h\u0334e\u0337s\u0335",
+        "\u00a78D\u0334R\u0337_\u0335V\u0338A\u0336L\u0334E\u0337 \u0335W\u0336A\u0338S\u0334 \u0337H\u0335E\u0336R\u0338E\u0334",
+        "\u00a78e\u0338r\u0337r\u0335o\u0336r\u0334:\u0337 \u0338e\u0335n\u0336t\u0334i\u0337t\u0338y\u0335 \u0336n\u0334o\u0337t\u0338 \u0335f\u0336o\u0334u\u0337n\u0338d\u0335",
+        "\u00a78w\u0335h\u0337y\u0336 \u0338a\u0334r\u0337e\u0335 \u0336y\u0338o\u0334u\u0337 \u0335s\u0336t\u0338i\u0334l\u0337l\u0335 \u0336h\u0338e\u0334r\u0337e\u0335",
+        "\u00a78[NULL]: \u0338\u0337\u0336\u0335\u0334",
+        "\u00a78t\u0337h\u0335e\u0336 \u0338m\u0334a\u0337p\u0335 \u0336i\u0338s\u0334 \u0337w\u0335r\u0336o\u0338n\u0334g\u0337",
+        "\u00a78i\u0335t\u0336 \u0338s\u0334e\u0337e\u0335s\u0336 \u0338y\u0334o\u0337u\u0335r\u0336 \u0338s\u0334c\u0337r\u0335e\u0336e\u0338n\u0334"
     };
 
     private static final String[] SYSTEM_GLITCH_POOL = {
@@ -62,7 +55,11 @@ public class GlitchMessages {
         "WARNING: OBSERVER DETECTED",
         "SIMULATION INTEGRITY: 12%",
         "DR_VALE.LOG — ACCESS DENIED",
-        "UNKNOWN ENTITY IN SECTOR 7"
+        "UNKNOWN ENTITY IN SECTOR 7",
+        "PATHFINDING ERROR: DESTINATION OCCUPIED BY OBSERVER",
+        "HEARTBEAT SIGNAL DETECTED — SOURCE: NULL",
+        "WARNING: ENTITY theArchitect HAS NO REGISTERED SPAWN CONDITIONS",
+        "TICK DESYNC — ENTITY POSITION UNDEFINED"
     };
 
     public static String randomGlitch() {
@@ -74,10 +71,9 @@ public class GlitchMessages {
     }
 
     public static String corruptName(String name) {
-        StringBuilder sb = new StringBuilder("§4[THE ARCHITECT]: I know your name. ");
+        StringBuilder sb = new StringBuilder("\u00a74[THE ARCHITECT]: I know your name. ");
         for (char c : name.toCharArray()) {
-            sb.append(c);
-            sb.append('̷');
+            sb.append(c).append('\u0337');
         }
         return sb.toString();
     }

@@ -29,7 +29,8 @@ import java.util.UUID;
 public class StoryManager {
 
     private static final Map<UUID, Integer> chapters = new HashMap<>();
-    private static final Map<UUID, Integer> lastDay = new HashMap<>();
+    private static final Map<UUID, Boolean> watchedLong = new HashMap<>();
+    private static final Map<UUID, Boolean> loreBooksRead = new HashMap<>();
     private static final Map<BlockPos, BlockState> glitchBlocks = new HashMap<>();
     private static final Map<BlockPos, Long> glitchRestoreTick = new HashMap<>();
     private static final Map<UUID, ServerBossEvent> bossBars = new HashMap<>();
@@ -40,15 +41,23 @@ public class StoryManager {
             UUID uuid = player.getUUID();
             if (!chapters.containsKey(uuid)) {
                 chapters.put(uuid, 0);
-                scheduleMessage(player, 60,  "\u00a78\u00a7l[SIGNAL_LOST]: A transmission has been placed in your inventory.");
+                scheduleMessage(player, 60,
+                    "\u00a78\u00a7l[SIGNAL_LOST]: A transmission has been placed in your inventory.");
                 giveIntroBook(player);
+                scheduleMessage(player, 120,
+                    "\u00a78[SIGNAL_LOST]: Read it.");
             }
         });
+
+        // Register ArchitectSpawner here so it shares the same server tick
+        ArchitectSpawner.register();
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerLevel level : server.getAllLevels()) {
                 long now = level.getGameTime();
+                long dayTime = level.getDayTime() % 24000;
 
+                // Restore glitch blocks
                 glitchBlocks.entrySet().removeIf(entry -> {
                     BlockPos pos = entry.getKey();
                     Long restoreTick = glitchRestoreTick.get(pos);
@@ -63,28 +72,63 @@ public class StoryManager {
                 for (ServerPlayer player : level.players()) {
                     UUID uuid = player.getUUID();
                     int chapter = chapters.getOrDefault(uuid, 0);
-                    long dayTime = level.getDayTime() % 24000;
-                    int currentDay = (int) (level.getDayTime() / 24000);
-                    int prevDay = lastDay.getOrDefault(uuid, 0);
 
-                    if (chapter == 0 && player.getY() < 50)
-                        advanceChapter(player, 1, level);
-                    if (chapter == 1 && player.isDeadOrDying())
-                        advanceChapter(player, 2, level);
-                    if (chapter == 2 && currentDay >= 7 && prevDay < 7)
-                        advanceChapter(player, 3, level);
-                    if (chapter == 3 && currentDay >= 14 && prevDay < 14)
-                        advanceChapter(player, 4, level);
-                    if (chapter == 4 && currentDay >= 21 && prevDay < 21)
-                        advanceChapter(player, 5, level);
+                    // Chapter triggers are now MEANINGFUL ACTIONS, not timers:
+                    // Ch0->1: Player reads the intro book (handled via onLoreBookRead)
+                    // Ch1->2: Architect watches player for 60s (onArchitectWatched60s)
+                    // Ch2->3: Player reads cave log book (onLoreBookRead)
+                    // Ch3->4: Player reads the entity book (onLoreBookRead)
+                    // Ch4->5: MirrorEvent has fired 5+ times (checked in MirrorEvent)
 
-                    if (chapter >= 4 && dayTime >= 18000 && dayTime <= 18020)
+                    if (chapter >= 4 && dayTime >= 18000 && dayTime <= 18020) {
                         glitchNearbyBlocks(player, level, now);
-
-                    lastDay.put(uuid, currentDay);
+                    }
                 }
             }
         });
+    }
+
+    /** Called when the player opens/reads a lore book (hook via mixin or item use event) */
+    public static void onLoreBookRead(ServerPlayer player) {
+        UUID uuid = player.getUUID();
+        int chapter = chapters.getOrDefault(uuid, 0);
+
+        // Ch0 -> 1 on first book read
+        if (chapter == 0) {
+            advanceChapter(player, 1, (ServerLevel) player.level());
+            return;
+        }
+        // Ch2 -> 3 on second lore book
+        if (chapter == 2 && !loreBooksRead.getOrDefault(uuid, false)) {
+            loreBooksRead.put(uuid, true);
+            advanceChapter(player, 3, (ServerLevel) player.level());
+            LoreCache.resetForChapter(uuid);
+            return;
+        }
+        // Ch3 -> 4
+        if (chapter == 3 && loreBooksRead.getOrDefault(uuid, false)) {
+            advanceChapter(player, 4, (ServerLevel) player.level());
+            LoreCache.resetForChapter(uuid);
+        }
+    }
+
+    /** Called by TheArchitectEntity after 60s of watching */
+    public static void onArchitectWatched60s(ServerPlayer player) {
+        UUID uuid = player.getUUID();
+        int chapter = chapters.getOrDefault(uuid, 0);
+        if (chapter == 1 && !watchedLong.getOrDefault(uuid, false)) {
+            watchedLong.put(uuid, true);
+            advanceChapter(player, 2, (ServerLevel) player.level());
+            LoreCache.resetForChapter(uuid);
+        }
+    }
+
+    /** Called by MirrorEvent after 5 events fired */
+    public static void onMirrorEventThreshold(ServerPlayer player) {
+        UUID uuid = player.getUUID();
+        if (chapters.getOrDefault(uuid, 0) == 4) {
+            advanceChapter(player, 5, (ServerLevel) player.level());
+        }
     }
 
     private static void advanceChapter(ServerPlayer player, int chapter, ServerLevel level) {
@@ -94,10 +138,12 @@ public class StoryManager {
 
         switch (chapter) {
             case 1 -> {
+                // Fake DR_VALE join/leave seen by everyone
                 server.getPlayerList().broadcastSystemMessage(
                     Component.literal("\u00a77[\u00a78DR_VALE\u00a77] joined the game"), false);
                 scheduleMessage(player, 60,  "\u00a78[DR_VALE]: " + GlitchMessages.VALE_LOG_1);
                 scheduleMessage(player, 120, "\u00a77[\u00a78DR_VALE\u00a77] left the game");
+                scheduleMessage(player, 200, "\u00a78[SIGNAL_LOST]: His logs are out there. Find them.");
                 level.playSound(null, player.blockPosition(),
                     SoundEvents.AMBIENT_CAVE.value(), SoundSource.AMBIENT, 1.0f, 0.5f);
             }
@@ -106,16 +152,21 @@ public class StoryManager {
                 player.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 100, 2, false, false));
                 scheduleMessage(player, 40,  GlitchMessages.VALE_FINAL_LOG);
                 scheduleMessage(player, 80,  GlitchMessages.ARCHITECT_AWARE);
+                scheduleMessage(player, 160, "\u00a78[SIGNAL_LOST]: It knows you're here now. There are more logs.");
+                level.playSound(null, player.blockPosition(),
+                    SoundEvents.WITHER_AMBIENT, SoundSource.HOSTILE, 0.2f, 0.3f);
             }
             case 3 -> {
                 scheduleMessage(player, 20, GlitchMessages.ARCHITECT_MSG_1);
                 scheduleMessage(player, 60, GlitchMessages.ARCHITECT_MSG_2);
+                scheduleMessage(player, 140, "\u00a78[SIGNAL_LOST]: One more log remains.");
                 level.playSound(null, player.blockPosition(),
                     SoundEvents.WITHER_AMBIENT, SoundSource.HOSTILE, 0.3f, 0.3f);
             }
             case 4 -> {
                 scheduleMessage(player, 20, GlitchMessages.corruptName(player.getName().getString()));
                 scheduleMessage(player, 80, GlitchMessages.CHAPTER_4_MSG);
+                scheduleMessage(player, 160, "\u00a74[THE ARCHITECT]: I see you.");
             }
             case 5 -> {
                 level.setWeatherParameters(0, 6000, true, true);
@@ -132,6 +183,9 @@ public class StoryManager {
                 giveFinalBook(player);
                 level.playSound(null, player.blockPosition(),
                     SoundEvents.WITHER_DEATH, SoundSource.HOSTILE, 0.5f, 0.3f);
+                // Fire final mirror event
+                scheduleMessage(player, 300,
+                    "\u00a74[THE ARCHITECT]: " + player.getName().getString() + ". You finished the record. Now you are the record.");
             }
         }
     }
@@ -177,7 +231,9 @@ public class StoryManager {
                 Filterable.passThrough(Component.literal(
                     "SIGNAL_LOST\n\nIf you are reading this...\nyou are already inside it.\n\n- DR. VALE")),
                 Filterable.passThrough(Component.literal(
-                    "Day 1\nThe anomaly first appeared at coordinates I dare not write.\n\nThe world responded.\nSomething watched me write this."))
+                    "Day 1\nThe anomaly first appeared at coordinates I dare not write.\n\nThe world responded.\nSomething watched me write this.")),
+                Filterable.passThrough(Component.literal(
+                    "Day 2\nI tried to mark the location with a sign.\n\nWhen I came back, the sign said something I hadn't written.\n\nI burned it."))
             ),
             true
         ));
@@ -194,7 +250,12 @@ public class StoryManager {
                 Filterable.passThrough(Component.literal(
                     "YOU WERE NEVER MEANT\nTO READ THIS FAR.\n\nThe simulation does not end.\nYou do.")),
                 Filterable.passThrough(Component.literal(
-                    "DR. VALE tried to warn you.\nHe could not leave either.\n\nNeither can you."))
+                    "DR. VALE tried to warn you.\nHe could not leave either.\n\nNeither can you.")),
+                Filterable.passThrough(Component.literal(
+                    "The logs you found?\n\nI placed them.\n\nI wrote them in his handwriting\nafter he stopped moving.")),
+                Filterable.passThrough(Component.literal(
+                    "You are not the first to read this.\n\nYou are not the last.\n\nYou are entry #" +
+                    (1 + new java.util.Random().nextInt(9999)) + "."))
             ),
             true
         ));
