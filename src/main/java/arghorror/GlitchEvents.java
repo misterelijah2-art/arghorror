@@ -26,10 +26,10 @@ public class GlitchEvents {
                     int roll = RANDOM.nextInt(100);
 
                     if (roll < 30) {
-                        // Distant sculk-like click
+                        // Use sculk shrieker shriek sound as creepy clicker substitute
                         level.playSound(null, player.blockPosition(),
-                            SoundEvents.SCULK_SENSOR_CLICKING_STOP, SoundSource.AMBIENT,
-                            0.3f, 0.5f);
+                            SoundEvents.SCULK_SHRIEKER_SHRIEK, SoundSource.AMBIENT,
+                            0.15f, 2.0f);
                     } else if (roll < 55) {
                         level.playSound(null, player.blockPosition(),
                             SoundEvents.ENDERMAN_AMBIENT, SoundSource.HOSTILE,
