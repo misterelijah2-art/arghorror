@@ -2,32 +2,25 @@ package arghorror.client;
 
 import arghorror.network.SanityPacket;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.HudLayerRegistrationCallback;
-import net.fabricmc.fabric.api.client.rendering.v1.IdentifiedLayer;
-import net.minecraft.client.DeltaTracker;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.resources.Identifier;
 
 public class SanityHud {
 
     private static int clientSanity = 100;
-    private static final Identifier LAYER_ID = Identifier.fromNamespaceAndPath("arghorror", "sanity_hud");
 
     public static void register() {
+        // Receive sanity value from server
         ClientPlayNetworking.registerGlobalReceiver(SanityPacket.TYPE, (payload, context) -> {
             clientSanity = payload.sanity();
         });
 
-        HudLayerRegistrationCallback.EVENT.register(layeredDraw -> {
-            layeredDraw.addAfter(
-                net.minecraft.client.gui.LayeredDraw.CHAT_PANEL,
-                IdentifiedLayer.of(LAYER_ID, SanityHud::renderHud)
-            );
-        });
+        // Register HUD render callback
+        HudRenderCallback.EVENT.register((graphics, tickDelta) -> renderHud(graphics));
     }
 
-    private static void renderHud(GuiGraphics graphics, DeltaTracker delta) {
+    private static void renderHud(GuiGraphics graphics) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.options.hideGui) return;
 
