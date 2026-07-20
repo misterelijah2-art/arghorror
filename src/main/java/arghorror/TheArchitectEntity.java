@@ -1,7 +1,7 @@
 package arghorror;
 
-import net.minecraft.nbt.ValueInput;
-import net.minecraft.nbt.ValueOutput;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
