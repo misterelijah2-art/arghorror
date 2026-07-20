@@ -80,8 +80,6 @@ public class StoryManager {
 
                     if (chapter >= 4 && dayTime >= 18000 && dayTime <= 18020)
                         glitchNearbyBlocks(player, level, now);
-                    if (chapter >= 3 && dayTime >= 18000 && dayTime <= 18005)
-                        player.addEffect(new MobEffectInstance(MobEffects.WITHER, 60, 0, false, false));
 
                     lastDay.put(uuid, currentDay);
                 }
@@ -154,7 +152,7 @@ public class StoryManager {
         }
     }
 
-    private static void scheduleMessage(ServerPlayer player, int delayTicks, String message) {
+    public static void scheduleMessage(ServerPlayer player, int delayTicks, String message) {
         MinecraftServer server = ((ServerLevel) player.level()).getServer();
         if (server == null) return;
         int targetTick = server.getTickCount() + delayTicks;
@@ -177,7 +175,7 @@ public class StoryManager {
             0,
             List.of(
                 Filterable.passThrough(Component.literal(
-                    "SIGNAL_LOST\n\nIf you are reading this... you are already inside it.\n\n- DR. VALE")),
+                    "SIGNAL_LOST\n\nIf you are reading this...\nyou are already inside it.\n\n- DR. VALE")),
                 Filterable.passThrough(Component.literal(
                     "Day 1\nThe anomaly first appeared at coordinates I dare not write.\n\nThe world responded.\nSomething watched me write this."))
             ),
@@ -194,7 +192,7 @@ public class StoryManager {
             0,
             List.of(
                 Filterable.passThrough(Component.literal(
-                    "YOU WERE NEVER MEANT TO READ THIS FAR.\n\nThe simulation does not end.\nYou do.")),
+                    "YOU WERE NEVER MEANT\nTO READ THIS FAR.\n\nThe simulation does not end.\nYou do.")),
                 Filterable.passThrough(Component.literal(
                     "DR. VALE tried to warn you.\nHe could not leave either.\n\nNeither can you."))
             ),

@@ -12,8 +12,11 @@ public class Arghorror implements ModInitializer {
     @Override
     public void onInitialize() {
         StoryManager.register();
-        SanitySystem.register();
         GlitchEvents.register();
+        WatcherSystem.register();
+        EchoSystem.register();
+        CorruptionSpread.register();
+        FootstepGhost.register();
         LOGGER.info("SIGNAL_LOST initialized.");
     }
 
