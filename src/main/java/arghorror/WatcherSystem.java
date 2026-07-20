@@ -14,12 +14,12 @@ import java.util.*;
 
 public class WatcherSystem {
 
-    private static final Map<UUID, Integer> blocksBroken    = new HashMap<>();
-    private static final Map<UUID, Integer> animalsKilled   = new HashMap<>();
+    private static final Map<UUID, Integer> blocksBroken     = new HashMap<>();
+    private static final Map<UUID, Integer> animalsKilled    = new HashMap<>();
     private static final Map<UUID, Long>    distanceTraveled = new HashMap<>();
-    private static final Map<UUID, Integer> nightsSlept     = new HashMap<>();
-    private static final Map<UUID, Long>    lastPos         = new HashMap<>();
-    private static final Map<UUID, Set<String>> fired       = new HashMap<>();
+    private static final Map<UUID, Integer> nightsSlept      = new HashMap<>();
+    private static final Map<UUID, Long>    lastPos          = new HashMap<>();
+    private static final Map<UUID, Set<String>> fired        = new HashMap<>();
 
     public static void register() {
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, entity) -> {
@@ -29,7 +29,7 @@ public class WatcherSystem {
         });
 
         ServerEntityCombatEvents.AFTER_KILLED_OTHER_ENTITY.register(
-            (world, entity, killedEntity) -> {
+            (ServerLevel level, Entity entity, LivingEntity killedEntity, DamageSource damageSource) -> {
                 if (!(entity instanceof ServerPlayer sp)) return;
                 if (!(killedEntity instanceof Animal)) return;
                 int count = animalsKilled.merge(sp.getUUID(), 1, Integer::sum);
@@ -42,7 +42,6 @@ public class WatcherSystem {
                 for (ServerPlayer player : level.players()) {
                     UUID uuid = player.getUUID();
 
-                    // Distance tracking
                     long packed = ((long)(int) player.getX() << 32) | ((int) player.getZ() & 0xFFFFFFFFL);
                     Long prev = lastPos.put(uuid, packed);
                     if (prev != null && prev != packed) {
@@ -52,7 +51,6 @@ public class WatcherSystem {
                         checkDistanceMilestones(player, total);
                     }
 
-                    // Sleep tracking
                     if (player.isSleeping()) {
                         int nights = nightsSlept.merge(uuid, 1, Integer::sum);
                         if (nights == 1 && hasFired(uuid, "sleep_1"))
