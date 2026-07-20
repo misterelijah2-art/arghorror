@@ -1,6 +1,9 @@
 package arghorror;
 
+import arghorror.network.SanityPacket;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -21,6 +24,9 @@ public class SanitySystem {
     private static int tickCounter = 0;
 
     public static void register() {
+        // Register the packet type server-side
+        PayloadTypeRegistry.playS2C().register(SanityPacket.TYPE, SanityPacket.CODEC);
+
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             tickCounter++;
             if (tickCounter % 40 != 0) return;
@@ -45,17 +51,18 @@ public class SanitySystem {
                     sanity.put(uuid, current);
 
                     applySanityEffects(player, current, level);
+
+                    // Sync to client every 2 seconds
+                    ServerPlayNetworking.send(player, new SanityPacket(current));
                 }
             }
         });
     }
 
     private static void applySanityEffects(ServerPlayer player, int s, ServerLevel level) {
-        // Only apply darkness if sanity is low AND the effect isn't already running
         if (s <= 60 && !player.hasEffect(MobEffects.DARKNESS)) {
             player.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 100, 0, false, false));
         }
-        // Remove darkness instantly when sanity recovers above 60
         if (s > 60 && player.hasEffect(MobEffects.DARKNESS)) {
             player.removeEffect(MobEffects.DARKNESS);
         }
@@ -66,7 +73,6 @@ public class SanitySystem {
                 0.4f, 0.5f + RANDOM.nextFloat() * 0.3f);
         }
 
-        // Only apply nausea if not already active
         if (s <= 20 && !player.hasEffect(MobEffects.NAUSEA)) {
             player.addEffect(new MobEffectInstance(MobEffects.NAUSEA, 80, 1, false, false));
         }
