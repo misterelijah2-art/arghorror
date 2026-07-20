@@ -66,8 +66,7 @@ public class ArchitectSpawner {
         TheArchitectEntity entity = ModEntities.THE_ARCHITECT.create(level, EntitySpawnReason.MOB_SUMMONED);
         if (entity == null) return;
 
-        // moveTo(double x, double y, double z, float yRot, float xRot)
-        entity.moveTo(spawnPos.getX() + 0.5, (double) spawnPos.getY(), spawnPos.getZ() + 0.5, 0f, 0f);
+        entity.snapTo(spawnPos.getX() + 0.5, (double) spawnPos.getY(), spawnPos.getZ() + 0.5, 0f, 0f);
         level.addFreshEntity(entity);
         activeEntities.put(player.getUUID(), entity);
     }
