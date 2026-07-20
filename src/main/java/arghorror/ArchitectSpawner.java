@@ -4,15 +4,10 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 
 import java.util.*;
 
-/**
- * Manages spawning and despawning of TheArchitect.
- * One instance per player max. Spawns at night or underground.
- * Tracks how many nights the entity has been active to escalate behaviour.
- */
 public class ArchitectSpawner {
 
     private static final Map<UUID, TheArchitectEntity> activeEntities = new HashMap<>();
@@ -22,7 +17,7 @@ public class ArchitectSpawner {
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             tick++;
-            if (tick % 200 != 0) return; // check every 10 seconds
+            if (tick % 200 != 0) return;
 
             for (ServerLevel level : server.getAllLevels()) {
                 long dayTime = level.getDayTime() % 24000;
@@ -33,21 +28,16 @@ public class ArchitectSpawner {
                     int chapter = StoryManager.getChapter(uuid);
                     if (chapter < 1) continue;
 
-                    // Clean up dead/removed entities
                     TheArchitectEntity existing = activeEntities.get(uuid);
                     if (existing != null && (existing.isRemoved() || !existing.isAlive())) {
                         activeEntities.remove(uuid);
                         existing = null;
                     }
-
-                    if (existing != null) continue; // already active
+                    if (existing != null) continue;
 
                     boolean underground = !level.canSeeSky(player.blockPosition());
-
-                    // Spawn conditions: night on surface, or underground any time
                     if (!isNightOrDusk && !underground) continue;
 
-                    // Chance scales with chapter
                     int chance = switch (chapter) {
                         case 1 -> 8;
                         case 2 -> 5;
@@ -63,23 +53,20 @@ public class ArchitectSpawner {
     }
 
     private static void spawnArchitect(ServerPlayer player, ServerLevel level) {
-        // Spawn 16-30 blocks away from player, behind their look direction
         double angle = Math.toRadians(player.getYRot() + 180 + (RANDOM.nextDouble() * 60 - 30));
         double dist = 16 + RANDOM.nextDouble() * 14;
         double sx = player.getX() + Math.cos(angle) * dist;
         double sz = player.getZ() + Math.sin(angle) * dist;
 
-        // Find solid ground at that XZ
         BlockPos spawnPos = level.getHeightmapPos(
             net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
             new BlockPos((int) sx, (int) player.getY(), (int) sz)
         );
 
-        TheArchitectEntity entity = ModEntities.THE_ARCHITECT.create(level);
+        TheArchitectEntity entity = ModEntities.THE_ARCHITECT.create(level, EntitySpawnReason.MOB_SUMMONED);
         if (entity == null) return;
 
-        entity.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, 0, 0);
-        entity.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos), MobSpawnType.MOB_SUMMONED, null);
+        entity.moveTo(spawnPos.getX() + 0.5, spawnPos.getY(), spawnPos.getZ() + 0.5, 0f, 0f);
         level.addFreshEntity(entity);
         activeEntities.put(player.getUUID(), entity);
     }

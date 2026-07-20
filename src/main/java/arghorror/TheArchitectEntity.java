@@ -1,15 +1,12 @@
 package arghorror;
 
-import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
+import net.minecraft.nbt.ValueInput;
+import net.minecraft.nbt.ValueOutput;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -21,22 +18,13 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
-import java.util.List;
 import java.util.UUID;
 
-/**
- * The Architect: an invisible stalker that exists in the world.
- * It never attacks. It watches. It stops ~10 blocks away and holds.
- * If the player looks directly at it, it freezes (Weeping Angel rule).
- * If the player looks away, it steps closer.
- * Despawns at dawn. Extinguishes torches near it via PresenceSystem.
- */
 public class TheArchitectEntity extends PathfinderMob {
 
     private static final EntityDataAccessor<Boolean> FROZEN =
         SynchedEntityData.defineId(TheArchitectEntity.class, EntityDataSerializers.BOOLEAN);
 
-    // How long the entity has been watching a specific player (ticks)
     private int watchTicks = 0;
     private UUID targetPlayerUUID = null;
 
@@ -67,12 +55,6 @@ public class TheArchitectEntity extends PathfinderMob {
     }
 
     @Override
-    public boolean hurt(net.minecraft.world.damagesource.DamageSource source, float amount) {
-        // Completely immune to all damage
-        return false;
-    }
-
-    @Override
     public boolean isInvisible() {
         return true;
     }
@@ -83,35 +65,28 @@ public class TheArchitectEntity extends PathfinderMob {
     @Override
     public void tick() {
         super.tick();
-        if (this.level().isClientSide) return;
+        Level world = this.level();
+        if (!(world instanceof ServerLevel level)) return;
 
-        ServerLevel level = (ServerLevel) this.level();
         long dayTime = level.getDayTime() % 24000;
-
-        // Despawn at dawn (6000 = roughly 6am)
         if (dayTime >= 6000 && dayTime <= 12000 && !level.dimensionType().hasFixedTime()) {
             this.discard();
             return;
         }
 
-        // Find nearest player
         Player nearest = level.getNearestPlayer(this, 64);
         if (nearest == null) return;
         targetPlayerUUID = nearest.getUUID();
 
-        // Weeping Angel: freeze if player is looking at us
         boolean playerLooking = isPlayerLookingAt((ServerPlayer) nearest);
         this.entityData.set(FROZEN, playerLooking);
         this.setNoAi(playerLooking);
 
-        // Count watch ticks for chapter progression
         if (distanceTo(nearest) < 20) {
             watchTicks++;
-            // After 3 seconds of watching, trigger presence events
             if (watchTicks % 60 == 0) {
                 PresenceSystem.onArchitectWatch((ServerPlayer) nearest, this.blockPosition());
             }
-            // After 60 seconds of watching, notify StoryManager
             if (watchTicks == 1200) {
                 StoryManager.onArchitectWatched60s((ServerPlayer) nearest);
             }
@@ -124,29 +99,24 @@ public class TheArchitectEntity extends PathfinderMob {
         Vec3 toEntity = this.position().subtract(eyePos).normalize();
         double dot = lookVec.dot(toEntity);
         double dist = this.distanceTo(player);
-        // Within 40 degree cone and 30 blocks
         return dot > 0.766 && dist < 30;
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag tag) {
-        super.addAdditionalSaveData(tag);
-        tag.putInt("WatchTicks", watchTicks);
+    public void addAdditionalSaveData(ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putInt("WatchTicks", watchTicks);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag tag) {
-        super.readAdditionalSaveData(tag);
-        watchTicks = tag.getInt("WatchTicks");
+    public void readAdditionalSaveData(ValueInput input) {
+        super.readAdditionalSaveData(input);
+        watchTicks = input.getIntOr("WatchTicks", 0);
     }
 
-    // -------------------------------------------------------------------------
-    // Inner Goal: Stalk the nearest player, stop ~10 blocks away
-    // -------------------------------------------------------------------------
     static class WatchAndStalkGoal extends Goal {
         private final TheArchitectEntity entity;
         private Player target;
-        private int stuckTicks = 0;
 
         WatchAndStalkGoal(TheArchitectEntity entity) {
             this.entity = entity;
@@ -163,13 +133,10 @@ public class TheArchitectEntity extends PathfinderMob {
         public void tick() {
             if (target == null || entity.entityData.get(FROZEN)) return;
             entity.getLookControl().setLookAt(target);
-
             double dist = entity.distanceTo(target);
             if (dist > 12) {
                 entity.getNavigation().moveTo(target, 1.0);
-                stuckTicks = 0;
             } else if (dist < 8) {
-                // Back away slightly if too close
                 Vec3 away = entity.position().subtract(target.position()).normalize().scale(3);
                 entity.getNavigation().moveTo(
                     entity.getX() + away.x, entity.getY(), entity.getZ() + away.z, 0.8);
