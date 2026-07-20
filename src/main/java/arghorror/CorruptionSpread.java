@@ -12,19 +12,10 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.*;
 
-/**
- * As chapters advance, the world permanently decays around where the player
- * has been. Corruption spreads slowly over time — crying obsidian, blackstone,
- * soul sand — and The Architect comments on it.
- * The corruption never goes away.
- */
 public class CorruptionSpread {
 
-    // Persists permanently — positions that have been corrupted
     private static final Set<BlockPos> corrupted = new HashSet<>();
-    // Queue of positions to corrupt on the next spread tick
     private static final Deque<BlockPos> spreadQueue = new ArrayDeque<>();
-
     private static int tickCounter = 0;
     private static final Random RANDOM = new Random();
 
@@ -42,16 +33,13 @@ public class CorruptionSpread {
 
             for (ServerLevel level : server.getAllLevels()) {
                 for (ServerPlayer player : level.players()) {
-                    UUID uuid = player.getUUID();
-                    int chapter = StoryManager.getChapter(uuid);
+                    int chapter = StoryManager.getChapter(player.getUUID());
                     if (chapter < 2) continue;
 
-                    // Seed new corruption at player position every 10 seconds
                     if (tickCounter % 200 == 0) {
                         seedCorruption(player.blockPosition().below(), level, chapter);
                     }
 
-                    // Spread existing corruption every 5 seconds
                     if (tickCounter % 100 == 0 && !spreadQueue.isEmpty()) {
                         int spreadCount = Math.min(3 + chapter, spreadQueue.size());
                         for (int i = 0; i < spreadCount; i++) {
@@ -62,8 +50,7 @@ public class CorruptionSpread {
                     }
                 }
 
-                // Architect remarks on corruption at chapter milestones
-                if (tickCounter % 6000 == 0) { // every 5 minutes
+                if (tickCounter % 6000 == 0) {
                     for (ServerPlayer player : level.players()) {
                         int chapter = StoryManager.getChapter(player.getUUID());
                         if (chapter >= 2 && corrupted.size() > 10 && RANDOM.nextInt(3) == 0) {
@@ -88,8 +75,7 @@ public class CorruptionSpread {
             int ox = RANDOM.nextInt(radius * 2) - radius;
             int oz = RANDOM.nextInt(radius * 2) - radius;
             BlockPos pos = center.offset(ox, 0, oz);
-            BlockState state = level.getBlockState(pos);
-            if (canCorrupt(state)) {
+            if (canCorrupt(level.getBlockState(pos))) {
                 corruptBlock(pos, level);
                 spreadQueue.add(pos);
             }
@@ -100,18 +86,16 @@ public class CorruptionSpread {
         int[][] dirs = {{1,0},{-1,0},{0,1},{0,-1}};
         int[] dir = dirs[RANDOM.nextInt(dirs.length)];
         BlockPos next = origin.offset(dir[0], 0, dir[1]);
-        BlockState state = level.getBlockState(next);
-        if (canCorrupt(state)) {
+        if (canCorrupt(level.getBlockState(next))) {
             corruptBlock(next, level);
             spreadQueue.add(next);
-            level.playSound(null, next, SoundEvents.SCULK_SPREAD, SoundSource.BLOCKS, 0.3f, 0.8f);
+            level.playSound(null, next, SoundEvents.SCULK_BLOCK_SPREAD, SoundSource.BLOCKS, 0.3f, 0.8f);
         }
     }
 
     private static void corruptBlock(BlockPos pos, ServerLevel level) {
         if (corrupted.add(pos)) {
-            BlockState corrupt = CORRUPT_PALETTE[RANDOM.nextInt(CORRUPT_PALETTE.length)];
-            level.setBlock(pos, corrupt, 3);
+            level.setBlock(pos, CORRUPT_PALETTE[RANDOM.nextInt(CORRUPT_PALETTE.length)], 3);
         }
     }
 
